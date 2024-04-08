@@ -20,7 +20,19 @@ object PNMutualExclusion:
     MSet(C) ~~> MSet()
   ).toSystem
 
+  def pnMEWithPriority = PetriNet[Place](
+    MSet(N) ~~> MSet(T) priority 2,
+    MSet(T) ~~> MSet(C) ^^^ MSet(C),
+    MSet(C) ~~> MSet()
+  ).toSystem
+
 @main def mainPNMutualExclusion =
   import PNMutualExclusion.*
   // example usage
   println(pnME.paths(MSet(N,N),7).toList.mkString("\n"))
+
+
+@main def mainPNMutualExclusionWithPriority =
+  import PNMutualExclusion.*
+  // example usage
+  println(pnMEWithPriority.paths(MSet(N, N), 7).toList.mkString("\n"))
