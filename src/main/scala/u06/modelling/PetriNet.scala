@@ -15,7 +15,7 @@ object PetriNet:
   type PetriNet[P] = Set[Trn[P]]
   type Marking[P] = MSet[*[P]]
 
-  @targetName("ColoredPlace")
+  @targetName("ColoredToken")
   case class *[P](p: P, color: Color = Color.Black):
     override def toString: String = color match
       case Color.Black => p.toString
