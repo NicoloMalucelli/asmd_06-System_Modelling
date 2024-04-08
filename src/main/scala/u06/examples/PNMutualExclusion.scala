@@ -2,11 +2,12 @@ package pc.examples
 
 export pc.modelling.PetriNet
 import pc.utils.MSet
+import pc.modelling.PetriNet.Color.*
 
 object PNMutualExclusion:
 
   enum Place:
-    case N, T, C
+    case N, T, A, B, C
     
   export Place.*
   export pc.modelling.PetriNet.*
@@ -27,10 +28,10 @@ object PNMutualExclusion:
   ).toSystem
 
   def pnMEWithColors = PetriNet[Place](
-    MSet(*(N)) ~~> MSet(*(T)),
-    MSet(*(N, Color.Red)) ~~> MSet(),
-    MSet(*(T)) ~~> MSet(*(C)) ^^^ MSet(*(C)),
-    MSet(*(C)) ~~> MSet()
+    MSet(*(A)) ~~> MSet(*(B)),
+    MSet(*(B)) ~~> MSet(*(C, Red)),
+    MSet(*(C, Red)) ~~> MSet(*(B, Red)),
+    MSet(*(B, Red)) ~~> MSet(*(A)),
   ).toSystem
 
 @main def mainPNMutualExclusion =
@@ -43,7 +44,7 @@ object PNMutualExclusion:
   // example usage
   println(pnMEWithPriority.paths(MSet(*(N), *(N)), 7).toList.mkString("\n"))
 
-@main def mainPNMutualExclusionWithColors =
+@main def mainPNWithColors =
   import PNMutualExclusion.*
   // example usage
-  println(pnMEWithColors.paths(MSet(*(N, Color.Red),*(N)),5).toList.mkString("\n"))
+  println(pnMEWithColors.paths(MSet(*(A), *(C, Color.Red)),3).toList.mkString("\n"))
