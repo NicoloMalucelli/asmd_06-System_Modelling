@@ -2,13 +2,25 @@ package pc.modelling
 
 import pc.utils.MSet
 
+import scala.annotation.targetName
+
 object PetriNet:
   // pre-conditions, effects, inhibition
-  
-  case class Trn[P](cond: MSet[P], eff: MSet[P], inh: MSet[P], priority: Int = 1)
+
+  enum Color:
+    case Black, Yellow, Red
+
+  case class Trn[P](cond: Marking[P], eff: Marking[P], inh: Marking[P], priority: Int = 1)
 
   type PetriNet[P] = Set[Trn[P]]
-  type Marking[P] = MSet[P]
+  type Marking[P] = MSet[*[P]]
+
+  @targetName("ColoredPlace")
+  case class *[P](p: P, color: Color = Color.Black):
+    override def toString: String = color match
+      case Color.Black => p.toString
+      case c => c.toString + "_" + p
+
 
   // factory of A Petri Net
   def apply[P](transitions: Trn[P]*): PetriNet[P] = transitions.toSet

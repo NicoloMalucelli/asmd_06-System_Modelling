@@ -15,24 +15,35 @@ object PNMutualExclusion:
 
   // DSL-like specification of a Petri Net
   def pnME = PetriNet[Place](
-    MSet(N) ~~> MSet(T),
-    MSet(T) ~~> MSet(C) ^^^ MSet(C),
-    MSet(C) ~~> MSet()
+    MSet(*(N)) ~~> MSet(*(T)),
+    MSet(*(T)) ~~> MSet(*(C)) ^^^ MSet(*(C)),
+    MSet(*(C)) ~~> MSet()
   ).toSystem
 
   def pnMEWithPriority = PetriNet[Place](
-    MSet(N) ~~> MSet(T) priority 2,
-    MSet(T) ~~> MSet(C) ^^^ MSet(C),
-    MSet(C) ~~> MSet()
+    MSet(*(N)) ~~> MSet(*(T)) priority 2,
+    MSet(*(T)) ~~> MSet(*(C)) ^^^ MSet(*(C)),
+    MSet(*(C)) ~~> MSet()
+  ).toSystem
+
+  def pnMEWithColors = PetriNet[Place](
+    MSet(*(N)) ~~> MSet(*(T)),
+    MSet(*(N, Color.Red)) ~~> MSet(),
+    MSet(*(T)) ~~> MSet(*(C)) ^^^ MSet(*(C)),
+    MSet(*(C)) ~~> MSet()
   ).toSystem
 
 @main def mainPNMutualExclusion =
   import PNMutualExclusion.*
   // example usage
-  println(pnME.paths(MSet(N,N),7).toList.mkString("\n"))
-
+  println(pnME.paths(MSet(*(N),*(N)),7).toList.mkString("\n"))
 
 @main def mainPNMutualExclusionWithPriority =
   import PNMutualExclusion.*
   // example usage
-  println(pnMEWithPriority.paths(MSet(N, N), 7).toList.mkString("\n"))
+  println(pnMEWithPriority.paths(MSet(*(N), *(N)), 7).toList.mkString("\n"))
+
+@main def mainPNMutualExclusionWithColors =
+  import PNMutualExclusion.*
+  // example usage
+  println(pnMEWithColors.paths(MSet(*(N, Color.Red),*(N)),5).toList.mkString("\n"))

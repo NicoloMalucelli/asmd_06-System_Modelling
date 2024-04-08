@@ -29,7 +29,8 @@ object MSet:
     override def apply(v1: A) = asMap.getOrElse(v1,0)
     override def union(m: MSet[A]) = new MSetImpl[A](asList ++ m.asList)
     override def diff(m: MSet[A]) = new MSetImpl[A](asList diff m.asList)
-    override def disjoined(m: MSet[A]) = (asList intersect m.asList).isEmpty
+    override def disjoined(m: MSet[A]) =
+      (asList intersect m.asList).isEmpty
     override def size = asList.size
     override def matches(m: MSet[A]) = extract(m).isDefined
     override def extract(m: MSet[A]) =
