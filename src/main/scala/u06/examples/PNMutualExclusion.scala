@@ -46,5 +46,5 @@ object PNMutualExclusion:
 
 @main def mainPNWithColors =
   import PNMutualExclusion.*
-  // example usage
+  // example usage`
   println(pnMEWithColors.paths(MSet(*(A), *(C, Color.Red)),3).toList.mkString("\n"))
