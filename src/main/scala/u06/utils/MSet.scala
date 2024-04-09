@@ -11,6 +11,7 @@ trait MSet[A] extends (A => Int):
   def asList: List[A]
   def asMap: Map[A,Int]
   def iterator: Iterator[A]
+  def contains(el: A): Boolean
 
 // Functional-style helpers/implementation
 object MSet:
@@ -33,6 +34,7 @@ object MSet:
       (asList intersect m.asList).isEmpty
     override def size = asList.size
     override def matches(m: MSet[A]) = extract(m).isDefined
+    override def contains(el: A): Boolean = asList.contains(el)
     override def extract(m: MSet[A]) =
       Some(this diff m) filter (_.size == size - m.size)
     override def iterator = asMap.keysIterator
