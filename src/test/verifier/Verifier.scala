@@ -24,17 +24,6 @@ object Verifier:
         not(*(WRITING) > 1)
       ) eval(readersAndWriters, MSet(*(R_WAIT), *(R_WAIT), *(R_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT))))
 
-  /*
-    liveness is not satisfied,
-    indeed is not guaranteed that writers will ever write or readers will ever read.
-    writers and readers may suffer starvation
-  */
-  @main def testLiveness =
-    println((
-      eventually( *(WRITING) is 1 ) and
-      eventually( *(READING) > 0 )
-    ) eval(readersAndWriters, MSet(*(R_WAIT), *(R_WAIT), *(R_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT))))
-
   def readersAndWritersWithLiveness = PetriNet[Place](
     MSet(*(W_WAIT), *(TOKEN)) ~~> MSet(*(READY_TO_WRITE)),
     MSet(*(R_WAIT), *(TOKEN)) ~~> MSet(*(READY_TO_READ), *(TOKEN)),

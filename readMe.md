@@ -1,5 +1,78 @@
 # System modelling
 
+## Task 1: Verifier
+
+In order to solve this task, I implemented a DSL that allows to test temporal logic on Petri nets.
+
+To do so, I defined a trait <tt>Condition</tt> and implemented the eval method for each one of the operators
+using an extension method. This allows the programmer to use the infix notation and make the code more readable.
+
+The operator I implemented are: *always*, *eventually*, *next*, *until* and *weakUntil*, along with some basic
+logical operators such as *and*, *or*, *not*, *<*, *>*, *== (is)*.
+
+All the above Conditions have been tested (*scala.u06.modelling.LTLTest*).
+
+Using this DSL is possible to describe simple temporal logic but also compose different conditions together in
+a readable way, by passing in the eval method the Petri Net and the initial marking:
+
+```
+(*(B) is 1 weakUntil eventually(*(D)) eval(pNet2, MSet(*(A))
+
+eventually(*(C)) until *(D)) eval(pNet3, MSet(*(A))
+```
+
+By using this DSL it's been easy to verify the safety property. In this specific case, the reader and writers
+problem safety property has been verified using 3 readers (initial state R_WAIT) and 4 writers (initial state
+W_WAIT):
+
+```
+always(
+    not(*(WRITING) and *(READING)) and
+    not(*(WRITING) > 1)
+  ) eval(readersAndWriters, MSet(*(R_WAIT), *(R_WAIT), *(R_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT)))
+```
+
+_N.B._ *prerequisite to use this DSL is the Petri Net to be bounded.*
+
+## Task 2: Designer
+
+In this variation of the readers and writers basic problem, a writer that wants to write will always be satisfied.
+The basic idea is to introduce a Token that is taken from the writer when they want to write. Readers need the token to
+access the READY_TO_READ state, therefore if a reader want to read but a writer already said that want to write, the reader
+must wait until the writer has finished. Many readers can access at the same time since the token is not consumed by the readers
+(*MSet(\*(R_WAIT), \*(TOKEN)) ~~> MSet(\*(READY_TO_READ), \*(TOKEN))*):
+
+```
+  def readersAndWritersWithLiveness = PetriNet[Place](
+    MSet(*(W_WAIT), *(TOKEN)) ~~> MSet(*(READY_TO_WRITE)),
+    MSet(*(R_WAIT), *(TOKEN)) ~~> MSet(*(READY_TO_READ), *(TOKEN)),
+    MSet(*(READY_TO_WRITE)) ~~> MSet(*(WRITING)) ^^^ MSet(*(READING)),
+    MSet(*(READY_TO_READ)) ~~> MSet(*(READING)) ^^^ MSet(*(WRITING)),
+    MSet(*(WRITING)) ~~> MSet(*(W_WAIT), *(TOKEN)),
+    MSet(*(READING)) ~~> MSet(*(R_WAIT)),
+  ).toSystem
+```
+
+Like in the normal case, the safety property has been tested using the implemented DSL:
+
+```
+always(
+    not(*(WRITING) and *(READING)) and
+    not(*(WRITING) > 1)
+) eval(readersAndWritersWithLiveness, MSet(*(TOKEN), *(R_WAIT), *(R_WAIT), *(R_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT)))
+```
+
+In addition to that, also the liveness property has been tested, in other words has been tested that if a writer wants
+to write, eventually they will (such property was not granted in the basic scenario):
+
+```
+(
+    (*(TOKEN) is 1) weakUntil (eventually(*(WRITING) is 1))
+) eval(readersAndWritersWithLiveness, MSet(*(TOKEN), *(R_WAIT), *(R_WAIT), *(R_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT)))
+```
+
+(this code is located in the verifier.Verifier file)
+
 ## Task 3: Artist
 
 Both the extensions have been realized modifying some of the original definitions in the PetriNet
