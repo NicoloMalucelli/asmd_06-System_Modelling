@@ -40,7 +40,6 @@ object LTL:
     private def internalEval(pNet: System[Marking[P]], toEval: Queue[Marking[P]], evaluated: Set[Marking[P]]): Boolean = toEval.dequeueOption match
       case None => true
       case Some((m, q)) if p.eval(m) =>
-        println(evaluated)
         internalEval(pNet, q enqueueAll (pNet.next(m) diff evaluated), evaluated + m)
       case _ => false
 
@@ -71,6 +70,19 @@ object LTL:
 
   case class Next[P](p: Condition[P]) extends Operator[P]:
     override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = pNet.next(m).map(p.eval).forall(identity)
+
+  case class Eventually[P](p: Condition[P]) extends Operator[P]:
+    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean =
+      internalEval(pNet, m, Set())
+
+    private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]]): Boolean = toEval match
+      case m if p.eval(m) => true
+      case m =>
+        val next = pNet.next(toEval)
+        if next.diff(evaluated).isEmpty then false else
+          next.diff(evaluated)
+            .map(newM => internalEval(pNet, newM, evaluated + m ++ next)).forall(identity)
+
   extension [P](c1: Condition[P])
     def and(c2: Condition[P]): Condition[P] = And(c1, c2)
     def or(c2: Condition[P]): Condition[P] = Or(c1, c2)
@@ -79,6 +91,7 @@ object LTL:
     def until(c2: Condition[P]): Operator[P] = Until(c1, c2)
     def next: Operator[P] = Next(c1)
     def weakUntil(c2: Condition[P]): Operator[P] = WeakUntil(c1, c2)
+    def eventually: Operator[P] = Eventually(c1)
 
 import pc.examples.PNMutualExclusion.*
 import LTL.*
@@ -100,4 +113,6 @@ import LTL.Condition.*
 
   //println(|(*(N)) until |(*(T)) eval (pnME, MSet(*(N))))
   //println(|(*(N)) weakUntil |(*(C)) eval (pnME, MSet(*(N))))
-  println(next(|(*(T)) or |(*(C))) eval (pnME, MSet(*(N), *(T))))
+  //println(next(|(*(T)) or |(*(C))) eval (pnME, MSet(*(N), *(T))))
+
+  println(eventually(|(*(C))) eval (pnME, MSet(*(N))))
