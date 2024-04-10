@@ -7,7 +7,7 @@ import pc.modelling.PetriNet.Color.*
 object PNMutualExclusion:
 
   enum Place:
-    case N, T, A, B, C
+    case N, T, A, B, C, D
     
   export Place.*
   export pc.modelling.PetriNet.*

@@ -18,7 +18,7 @@ object PetriNet:
   import scala.u06.modelling.LTL.Condition
   @targetName("ColoredToken")
   case class *[P](p: P, color: Color = Color.Black) extends Condition[P]:
-    override def eval(m: Marking[P]): Boolean = m.contains(this)
+    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = m.contains(this)
     override def toString: String = color match
       case Color.Black => p.toString
       case c => c.toString + "_" + p

@@ -12,93 +12,59 @@ import scala.u06.modelling.LTL.Condition
 object LTL:
 
   trait Condition[P]:
-    def eval(m: Marking[P]): Boolean
-
-  case class And[P](p1: Condition[P], p2: Condition[P]) extends Condition[P]:
-    override def eval(m: Marking[P]): Boolean = p1.eval(m) && p2.eval(m)
-
-  case class Or[P](p1: Condition[P], p2: Condition[P]) extends Condition[P]:
-    override def eval(m: Marking[P]): Boolean = p1.eval(m) || p2.eval(m)
-
-  case class Not[P](p: Condition[P]) extends Condition[P]:
-    override def eval(m: Marking[P]): Boolean = !p.eval(m)
+    infix def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean
 
   extension [P](p: *[P])
     @targetName("less")
-    def <(n: Integer): Condition[P] = m => m.asMap.getOrElse(p, 0) < n
+    infix def <(n: Integer): Condition[P] = (_, m) => m.asMap.getOrElse(p, 0) < n
     @targetName("greater")
-    def >(n: Integer): Condition[P] = m => m.asMap.getOrElse(p, 0) > n
-    def is(n: Integer): Condition[P] = m => m.asMap.getOrElse(p, 0) == n
+    infix def >(n: Integer): Condition[P] = (_, m) => m.asMap.getOrElse(p, 0) > n
+    infix def is(n: Integer): Condition[P] = (_, m) => m.asMap.getOrElse(p, 0) == n
 
-  trait Operator[P]:
-    def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean
+  extension [P](p: Condition[P])
+    infix def and(p2: Condition[P]): Condition[P] = (pNet, m) => p.eval(pNet, m) && p2.eval(pNet, m)
+    infix def or(p2: Condition[P]): Condition[P] = (pNet, m) => p.eval(pNet, m) || p2.eval(pNet, m)
+    infix def not: Condition[P] = (pNet, m) => !p.eval(pNet, m)
+    def always: Condition[P] = new Condition[P]:
+      override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = internalEval(pNet, Queue(m), Set())
+      @tailrec
+      private def internalEval(pNet: System[Marking[P]], toEval: Queue[Marking[P]], evaluated: Set[Marking[P]]): Boolean = toEval.dequeueOption match
+          case None => true
+          case Some((m, q)) if p.eval(pNet, m) =>
+            internalEval(pNet, q enqueueAll (pNet.next(m) diff evaluated), evaluated + m)
+          case _ => false
 
-  case class Always[P](p: Condition[P]) extends Operator[P]:
-    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean =
-      internalEval(pNet, Queue(m), Set())
+    def eventually: Condition[P] = new Condition[P]:
+      override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = internalEval(pNet, m, Set())
 
-    @tailrec
-    private def internalEval(pNet: System[Marking[P]], toEval: Queue[Marking[P]], evaluated: Set[Marking[P]]): Boolean = toEval.dequeueOption match
-      case None => true
-      case Some((m, q)) if p.eval(m) =>
-        internalEval(pNet, q enqueueAll (pNet.next(m) diff evaluated), evaluated + m)
-      case _ => false
+      private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]]): Boolean = toEval match
+        case m if p.eval(pNet, m) => true
+        case m => pNet.next(toEval) match
+          case mNext if mNext.diff(evaluated).isEmpty => false
+          case mNext => mNext.diff(evaluated).map(newM => internalEval(pNet, newM, evaluated + m ++ mNext)).forall(identity)
 
-  case class Until[P](p: Condition[P], q: Condition[P]) extends Operator[P]:
-    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean =
-      internalEval(pNet, m, Set(), false)
+    def next: Condition[P] = (pNet, m) => pNet.next(m).map(m => p.eval(pNet, m)).forall(identity)
 
-    private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]], pWasTrue: Boolean): Boolean = toEval match
-      case m if q.eval(m) => pWasTrue
-      case m if p.eval(m) =>
-        val next = pNet.next(toEval)
-        if next.diff(evaluated).isEmpty then false else
-          next.diff(evaluated)
-            .map(newM => internalEval(pNet, newM, evaluated + m ++ next, true)).forall(identity)
-      case _ => false
+    infix def until(q: Condition[P]): Condition[P] = new Condition[P]:
+      override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = internalEval(pNet, m, Set(), false)
 
-  case class WeakUntil[P](p: Condition[P], q: Condition[P]) extends Operator[P]:
-    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean =
-      internalEval(pNet, m, Set(), false)
+      private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]], pWasTrue: Boolean): Boolean = toEval match
+        //case m if q.eval(pNet, m) => pWasTrue
+        case m if !p.eval(pNet, m) => pWasTrue && q.eval(pNet, m)
+        case m => pNet.next(toEval) match
+          case mNext if mNext.diff(evaluated).isEmpty => false
+          case mNext => mNext.diff(evaluated).map(newM => internalEval(pNet, newM, evaluated + m ++ mNext, true)).forall(identity)
 
-    private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]], pWasTrue: Boolean): Boolean = toEval match
-      case m if q.eval(m) => pWasTrue
-      case m if p.eval(m) =>
-        val next = pNet.next(toEval)
-        next.diff(evaluated)
-          .map(newM => internalEval(pNet, newM, evaluated + m ++ next, true)).forall(identity)
-      case _ => false
+    infix def weakUntil(q: Condition[P]): Condition[P] = new Condition[P]:
+      override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = internalEval(pNet, m, Set())
 
-  case class Next[P](p: Condition[P]) extends Operator[P]:
-    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = pNet.next(m).map(p.eval).forall(identity)
-
-  case class Eventually[P](p: Condition[P]) extends Operator[P]:
-    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean =
-      internalEval(pNet, m, Set())
-
-    private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]]): Boolean = toEval match
-      case m if p.eval(m) => true
-      case m =>
-        val next = pNet.next(toEval)
-        if next.diff(evaluated).isEmpty then false else
-          next.diff(evaluated)
-            .map(newM => internalEval(pNet, newM, evaluated + m ++ next)).forall(identity)
-
-  extension [P](p1: Operator[P])
-    def and(p2: Operator[P]): Operator[P] = (pNet, m) => p1.eval(pNet, m) && p2.eval(pNet, m)
-    def or(p2: Operator[P]): Operator[P] = (pNet, m) => p1.eval(pNet, m) || p2.eval(pNet, m)
-    def not: Operator[P] = (pNet, m) => !p1.eval(pNet, m)
-
-  extension [P](c1: Condition[P])
-    def and(c2: Condition[P]): Condition[P] = And(c1, c2)
-    def or(c2: Condition[P]): Condition[P] = Or(c1, c2)
-    def not: Condition[P] = Not(c1)
-    def always: Operator[P] = Always(c1)
-    def until(c2: Condition[P]): Operator[P] = Until(c1, c2)
-    def next: Operator[P] = Next(c1)
-    def weakUntil(c2: Condition[P]): Operator[P] = WeakUntil(c1, c2)
-    def eventually: Operator[P] = Eventually(c1)
-
+      private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]]): Boolean = toEval match
+        //case m if q.eval(pNet, m) => true
+        //case m if !p.eval(pNet, m) => false
+        case m if !p.eval(pNet, m) => q.eval(pNet, m)
+        case m => pNet.next(toEval) match
+          case mNext if mNext.diff(evaluated).isEmpty => true
+          case mNext => mNext.diff(evaluated).map(newM => internalEval(pNet, newM, evaluated + m ++ mNext)).forall(identity)
 
 import pc.examples.PNMutualExclusion.*
 import LTL.*
@@ -109,16 +75,38 @@ import LTL.*
 
 
   def pnME = PetriNet[Place](
-    MSet(*(N)) ~~> MSet(*(T)),
-    MSet(*(T)) ~~> MSet(*(C)),
-    MSet(*(C)) ~~> MSet()
+    MSet(*(A)) ~~> MSet(*(B)),
+    MSet(*(B)) ~~> MSet(*(C)),
+    MSet(*(C)) ~~> MSet(*(D)),
+    MSet(*(C)) ~~> MSet(*(B)),
   ).toSystem
 
-  //println(Always(not(|(*(A)))) eval (pnME, MSet(*(N))))
-  //println(always(|(*(N)) or |(*(T)) or |(*(C))) eval (pnME, MSet(*(N))))
+  /*
+  println(always(not(*(N))) eval (pnME, MSet(*(A)))) //true
+  println(always(*(C)) eval (pnME, MSet(*(A)))) //false
+  println()
+  println(eventually(*(C)) eval (pnME, MSet(*(A)))) //true
+  println(eventually(*(N)) eval (pnME, MSet(*(A)))) //false
+  println()
+  println(next(*(B)) eval (pnME, MSet(*(A)))) //true
+  println(next(*(C)) eval (pnME, MSet(*(A)))) //false
+  println()
+  println((*(A) until *(B)) eval (pnME, MSet(*(A)))) //true
+  println((*(A) until *(C)) eval (pnME, MSet(*(A)))) //false
+  println((*(A) until *(C)) eval(PetriNet[Place](MSet(*(A)) ~~> MSet(*(A))).toSystem, MSet(*(A)))) //false
+  println()
+  println((*(A) weakUntil *(B)) eval(pnME, MSet(*(A)))) //true
+  println((*(A) weakUntil *(C)) eval (pnME, MSet(*(A)))) //false
+  println((*(A) weakUntil *(C)) eval(PetriNet[Place](MSet(*(A)) ~~> MSet(*(A))).toSystem, MSet(*(A)))) //true
+  println()
+  */
 
-  //println(|(*(N)) until |(*(T)) eval (pnME, MSet(*(N))))
-  //println(|(*(N)) weakUntil |(*(C)) eval (pnME, MSet(*(N))))
-  //println(next(|(*(T)) or |(*(C))) eval (pnME, MSet(*(N), *(T))))
+  def pnME2 = PetriNet[Place](
+    MSet(*(A)) ~~> MSet(),
+    MSet(*(A), *(B)) ~~> MSet(*(C)),
+    MSet(*(C)) ~~> MSet(*(D)),
+  ).toSystem
 
-  println(*(T) weakUntil *(C) eval (pnME, MSet(*(N))))
+  //println(eventually(*(D)) eval(pnME2, MSet(*(A), *(B))))
+  //println((*(B) is 0 weakUntil  *(D)) eval(pnME2, MSet(*(A), *(B))))
+  println((*(B) is 1 weakUntil eventually(*(D))) eval(pnME2, MSet(*(A), *(B))))
