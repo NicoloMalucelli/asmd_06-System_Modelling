@@ -29,7 +29,6 @@ object LTL:
   case class Not[P](p: Condition[P]) extends Condition[P]:
     override def eval(m: Marking[P]): Boolean = !p.eval(m)
 
-
   trait Operator[P]:
     def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean
 
@@ -70,12 +69,15 @@ object LTL:
           .map(newM => internalEval(pNet, newM, evaluated + m ++ next, true)).forall(identity)
       case _ => false
 
+  case class Next[P](p: Condition[P]) extends Operator[P]:
+    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = pNet.next(m).map(p.eval).forall(identity)
   extension [P](c1: Condition[P])
     def and(c2: Condition[P]): Condition[P] = And(c1, c2)
     def or(c2: Condition[P]): Condition[P] = Or(c1, c2)
     def not: Condition[P] = Not(c1)
     def always: Operator[P] = Always(c1)
     def until(c2: Condition[P]): Operator[P] = Until(c1, c2)
+    def next: Operator[P] = Next(c1)
     def weakUntil(c2: Condition[P]): Operator[P] = WeakUntil(c1, c2)
 
 import pc.examples.PNMutualExclusion.*
@@ -97,4 +99,5 @@ import LTL.Condition.*
   //println(always(|(*(N)) or |(*(T)) or |(*(C))) eval (pnME, MSet(*(N))))
 
   //println(|(*(N)) until |(*(T)) eval (pnME, MSet(*(N))))
-  println(|(*(N)) weakUntil |(*(C)) eval (pnME, MSet(*(N))))
+  //println(|(*(N)) weakUntil |(*(C)) eval (pnME, MSet(*(N))))
+  println(next(|(*(T)) or |(*(C))) eval (pnME, MSet(*(N), *(T))))
