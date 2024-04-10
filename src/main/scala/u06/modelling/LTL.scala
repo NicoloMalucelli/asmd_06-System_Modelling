@@ -1,10 +1,15 @@
 package scala.u06.modelling
 
+import pc.examples.PNMutualExclusion.Place.{N, T}
 import pc.modelling.PetriNet.*
 
-import scala.annotation.targetName
+import scala.annotation.{tailrec, targetName}
+import pc.modelling.{PetriNet, System}
+
+import scala.collection.immutable.Queue
 
 object LTL:
+
   trait Condition[P]:
     def eval(m: Marking[P]): Boolean
   object Condition:
@@ -24,6 +29,22 @@ object LTL:
   case class Not[P](p: Condition[P]) extends Condition[P]:
     override def eval(m: Marking[P]): Boolean = !p.eval(m)
 
+
+  trait Operator[P]:
+    def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean
+
+  case class Always[P](p: Condition[P]) extends Operator[P]:
+    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean =
+      internalEval(pNet, Queue(m), Set())
+
+    @tailrec
+    private def internalEval(pNet: System[Marking[P]], toEval: Queue[Marking[P]], evaluated: Set[Marking[P]]): Boolean = toEval.dequeueOption match
+      case None => true
+      case Some((m, q)) if p.eval(m) =>
+        println(evaluated)
+        internalEval(pNet, q enqueueAll (pNet.next(m) diff evaluated), evaluated + m)
+      case _ => false
+
   extension [P](c1: Condition[P])
     def and(c2: Condition[P]): Condition[P] = And(c1, c2)
     def or(c2: Condition[P]): Condition[P] = Or(c1, c2)
@@ -31,7 +52,18 @@ object LTL:
 
 import pc.examples.PNMutualExclusion.*
 import LTL.*
-import LTL.Condition.*
 
+import LTL.Condition.*
 @main def testLTL =
-  println(|(*(N)) and not(|(*(A))) eval MSet(*(N), *(B)))
+  //println(|(*(N)) and not(|(*(A))) eval MSet(*(N), *(B)))
+  import PetriNet.*
+
+
+  def pnME = PetriNet[Place](
+    MSet(*(N)) ~~> MSet(*(T)),
+    MSet(*(T)) ~~> MSet(*(C)),
+    MSet(*(C)) ~~> MSet()
+  ).toSystem
+
+  //println(Always(not(|(*(A)))) eval (pnME, MSet(*(N))))
+  println(Always(|(*(N)) or |(*(T)) or |(*(C))) eval (pnME, MSet(*(N))))
