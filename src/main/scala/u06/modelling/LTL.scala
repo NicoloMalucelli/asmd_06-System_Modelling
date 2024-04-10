@@ -45,10 +45,38 @@ object LTL:
         internalEval(pNet, q enqueueAll (pNet.next(m) diff evaluated), evaluated + m)
       case _ => false
 
+  case class Until[P](p: Condition[P], q: Condition[P]) extends Operator[P]:
+    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean =
+      internalEval(pNet, m, Set(), false)
+
+    private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]], pWasTrue: Boolean): Boolean = toEval match
+      case m if q.eval(m) => pWasTrue
+      case m if p.eval(m) =>
+        val next = pNet.next(toEval)
+        if next.diff(evaluated).isEmpty then false else
+          next.diff(evaluated)
+            .map(newM => internalEval(pNet, newM, evaluated + m ++ next, true)).forall(identity)
+      case _ => false
+
+  case class WeakUntil[P](p: Condition[P], q: Condition[P]) extends Operator[P]:
+    override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean =
+      internalEval(pNet, m, Set(), false)
+
+    private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]], pWasTrue: Boolean): Boolean = toEval match
+      case m if q.eval(m) => pWasTrue
+      case m if p.eval(m) =>
+        val next = pNet.next(toEval)
+        next.diff(evaluated)
+          .map(newM => internalEval(pNet, newM, evaluated + m ++ next, true)).forall(identity)
+      case _ => false
+
   extension [P](c1: Condition[P])
     def and(c2: Condition[P]): Condition[P] = And(c1, c2)
     def or(c2: Condition[P]): Condition[P] = Or(c1, c2)
     def not: Condition[P] = Not(c1)
+    def always: Operator[P] = Always(c1)
+    def until(c2: Condition[P]): Operator[P] = Until(c1, c2)
+    def weakUntil(c2: Condition[P]): Operator[P] = WeakUntil(c1, c2)
 
 import pc.examples.PNMutualExclusion.*
 import LTL.*
@@ -66,4 +94,7 @@ import LTL.Condition.*
   ).toSystem
 
   //println(Always(not(|(*(A)))) eval (pnME, MSet(*(N))))
-  println(Always(|(*(N)) or |(*(T)) or |(*(C))) eval (pnME, MSet(*(N))))
+  //println(always(|(*(N)) or |(*(T)) or |(*(C))) eval (pnME, MSet(*(N))))
+
+  //println(|(*(N)) until |(*(T)) eval (pnME, MSet(*(N))))
+  println(|(*(N)) weakUntil |(*(C)) eval (pnME, MSet(*(N))))
