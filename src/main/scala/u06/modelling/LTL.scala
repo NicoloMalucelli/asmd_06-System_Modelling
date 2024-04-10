@@ -7,6 +7,7 @@ import scala.annotation.{tailrec, targetName}
 import pc.modelling.{PetriNet, System}
 
 import scala.collection.immutable.Queue
+import scala.u06.modelling.LTL.Condition
 
 object LTL:
 
@@ -21,6 +22,13 @@ object LTL:
 
   case class Not[P](p: Condition[P]) extends Condition[P]:
     override def eval(m: Marking[P]): Boolean = !p.eval(m)
+
+  extension [P](p: *[P])
+    @targetName("less")
+    def <(n: Integer): Condition[P] = m => m.asMap.getOrElse(p, 0) < n
+    @targetName("greater")
+    def >(n: Integer): Condition[P] = m => m.asMap.getOrElse(p, 0) > n
+    def is(n: Integer): Condition[P] = m => m.asMap.getOrElse(p, 0) == n
 
   trait Operator[P]:
     def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean
@@ -76,17 +84,10 @@ object LTL:
           next.diff(evaluated)
             .map(newM => internalEval(pNet, newM, evaluated + m ++ next)).forall(identity)
 
-  def and[P](p1: Operator[P], p2: Operator[P]): Operator[P] = (pNet, m) => {
-    p1.eval(pNet, m) && p2.eval(pNet, m)
-  }
-
-  def or[P](p1: Operator[P], p2: Operator[P]): Operator[P] = (pNet, m) => {
-    p1.eval(pNet, m) || p2.eval(pNet, m)
-  }
-
-  def not[P](p1: Operator[P]): Operator[P] = (pNet, m) => {
-    !p1.eval(pNet, m)
-  }
+  extension [P](p1: Operator[P])
+    def and(p2: Operator[P]): Operator[P] = (pNet, m) => p1.eval(pNet, m) && p2.eval(pNet, m)
+    def or(p2: Operator[P]): Operator[P] = (pNet, m) => p1.eval(pNet, m) || p2.eval(pNet, m)
+    def not: Operator[P] = (pNet, m) => !p1.eval(pNet, m)
 
   extension [P](c1: Condition[P])
     def and(c2: Condition[P]): Condition[P] = And(c1, c2)
@@ -120,4 +121,4 @@ import LTL.*
   //println(|(*(N)) weakUntil |(*(C)) eval (pnME, MSet(*(N))))
   //println(next(|(*(T)) or |(*(C))) eval (pnME, MSet(*(N), *(T))))
 
-  println(eventually(*(C)) eval (pnME, MSet(*(N))))
+  println(*(T) weakUntil *(C) eval (pnME, MSet(*(N))))
