@@ -1,13 +1,13 @@
 package scala.u06.modelling
 
-import pc.examples.PNMutualExclusion.Place.{N, T}
+import pc.examples.PNMutualExclusion.Place.{A, N, T}
 import pc.modelling.PetriNet.*
 
 import scala.annotation.{tailrec, targetName}
 import pc.modelling.{PetriNet, System}
+import pc.utils.MSet
 
 import scala.collection.immutable.Queue
-import scala.u06.modelling.LTL.Condition
 
 object LTL:
 
@@ -24,7 +24,7 @@ object LTL:
   extension [P](p: Condition[P])
     infix def and(p2: Condition[P]): Condition[P] = (pNet, m) => p.eval(pNet, m) && p2.eval(pNet, m)
     infix def or(p2: Condition[P]): Condition[P] = (pNet, m) => p.eval(pNet, m) || p2.eval(pNet, m)
-    infix def not: Condition[P] = (pNet, m) => !p.eval(pNet, m)
+    def not: Condition[P] = (pNet, m) => !p.eval(pNet, m)
     def always: Condition[P] = new Condition[P]:
       override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = internalEval(pNet, Queue(m), Set())
       @tailrec

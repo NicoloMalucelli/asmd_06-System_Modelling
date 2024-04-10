@@ -54,8 +54,7 @@ object Verifier:
   @main def testLivenessV2 =
     println(
       (
-        ((*(TOKEN) is 1) weakUntil (*(TOKEN) is 0)) and
-        ((*(READY_TO_WRITE) is 1) until (*(WRITING) is 0))
+        (*(TOKEN) is 1) weakUntil (eventually(*(WRITING) is 1))
       ) eval(readersAndWritersWithLiveness, MSet(*(TOKEN), *(R_WAIT), *(R_WAIT), *(R_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT), *(W_WAIT))))
 
     // *(TOKEN) is 1 weakUntil *(TOKEN) is 0
