@@ -7,7 +7,7 @@ In order to solve this task, I implemented a DSL that allows to test temporal lo
 To do so, I defined a trait <tt>Condition</tt> and implemented the eval method for each one of the operators
 using an extension method. This allows the programmer to use the infix notation and make the code more readable.
 
-The operator I implemented are: *always*, *eventually*, *next*, *until* and *weakUntil*, along with some basic
+The operators I implemented are: *always*, *eventually*, *next*, *until* and *weakUntil*, along with some basic
 logical operators such as *and*, *or*, *not*, *<*, *>*, *== (is)*.
 
 All the above Conditions have been tested (*scala.u06.modelling.LTLTest*).
