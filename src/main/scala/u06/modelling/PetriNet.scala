@@ -2,7 +2,8 @@ package pc.modelling
 
 import pc.utils.MSet
 
-import scala.annotation.targetName
+import scala.annotation.{tailrec, targetName}
+import scala.collection.immutable.{HashMap, Map}
 
 object PetriNet:
   // pre-conditions, effects, inhibition
@@ -37,6 +38,17 @@ object PetriNet:
       yield (priority, out union eff))
         .maxes(_._1)
         .map(_._2)          // add effect
+
+    def toSystemWithCache: System[Marking[P]] = new System[Marking[P]]:
+      val system: System[Marking[P]] = pn.toSystem
+      var cache: Map[Marking[P], Set[Marking[P]]] = HashMap[Marking[P], Set[Marking[P]]]()
+
+      @tailrec
+      override def next(a: Marking[P]): Set[Marking[P]] = cache.get(a) match
+        case Some(res) => res
+        case None => 
+          cache = cache + ((a, system.next(a))) 
+          this.next(a) 
 
   extension [T](l: Set[T])
     def maxes[B: Ordering](f: T => B): Set[T] = l.maxByOption(f) match
