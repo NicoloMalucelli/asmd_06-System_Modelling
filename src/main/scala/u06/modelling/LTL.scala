@@ -1,6 +1,7 @@
 package scala.u06.modelling
 
-import pc.examples.PNMutualExclusion.Place.{A, N, T}
+import pc.examples.PNMutualExclusion.Place
+import pc.examples.PNMutualExclusion.Place.{A, N, T, B, C, D}
 import pc.modelling.PetriNet.*
 
 import scala.annotation.{tailrec, targetName}
@@ -49,8 +50,8 @@ object LTL:
       override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = internalEval(pNet, m, Set(), false)
 
       private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]], pWasTrue: Boolean): Boolean = toEval match
-        //case m if q.eval(pNet, m) => pWasTrue
-        case m if !p.eval(pNet, m) => pWasTrue && q.eval(pNet, m)
+        case m if q.eval(pNet, m) => pWasTrue
+        //case m if !p.eval(pNet, m) => pWasTrue && q.eval(pNet, m)
         case m => pNet.next(toEval) match
           case mNext if mNext.diff(evaluated).isEmpty => false
           case mNext => mNext.diff(evaluated).map(newM => internalEval(pNet, newM, evaluated + m ++ mNext, true)).forall(identity)
@@ -59,9 +60,18 @@ object LTL:
       override def eval(pNet: System[Marking[P]], m: Marking[P]): Boolean = internalEval(pNet, m, Set())
 
       private def internalEval(pNet: System[Marking[P]], toEval: Marking[P], evaluated: Set[Marking[P]]): Boolean = toEval match
-        //case m if q.eval(pNet, m) => true
-        //case m if !p.eval(pNet, m) => false
-        case m if !p.eval(pNet, m) => q.eval(pNet, m)
+        case m if q.eval(pNet, m) => true
+        case m if !p.eval(pNet, m) => false
+        //case m if !p.eval(pNet, m) => q.eval(pNet, m)
         case m => pNet.next(toEval) match
           case mNext if mNext.diff(evaluated).isEmpty => true
           case mNext => mNext.diff(evaluated).map(newM => internalEval(pNet, newM, evaluated + m ++ mNext)).forall(identity)
+
+@main def main() =
+  val pNet = PetriNet[Place](
+    MSet(*(N)) ~~> MSet(*(B)) ^^^ MSet(*(C)),
+    MSet(*(C)) ~~> MSet(*(A)),
+    MSet(*(B), *(A), *(A)) ~~> MSet(*(D)),
+  ).toSystem
+
+  println((*(A) weakUntil *(B)) eval(pNet, MSet(*(N), *(C), *(A))))
