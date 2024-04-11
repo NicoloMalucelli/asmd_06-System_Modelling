@@ -1,10 +1,11 @@
 package scala.u06.modelling
 
+import org.scalatest.concurrent.Eventually.eventually
 import pc.modelling.PetriNet
 import pc.modelling.PetriNet.*
 import pc.utils.MSet
 
-import scala.u06.modelling.LTL.{not, and, always}
+import scala.u06.modelling.LTL.{always, and, not}
 
 object LTLPerformance:
 
@@ -41,3 +42,11 @@ object LTLPerformance:
 
     println("time without cache [ms]: " + timeOf(() => condition eval (pNet.toSystem, initialMarkup) )) //5.892 ms
     println("time with cache [ms]:    " + timeOf(() => condition eval (pNet.toSystemWithCache, initialMarkup) )) //279 ms
+
+    val condition2 = (
+      (*(TOKEN) is 1) weakUntil (eventually(*(WRITING) is 1))
+    )
+
+    println("time without cache [ms]: " + timeOf(() => condition2 eval(pNet.toSystem, initialMarkup))) //121.174 ms
+    println("time with cache [ms]:    " + timeOf(() => condition2 eval(pNet.toSystemWithCache, initialMarkup))) //16.419 ms
+
