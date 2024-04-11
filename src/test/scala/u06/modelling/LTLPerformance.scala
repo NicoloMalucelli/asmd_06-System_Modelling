@@ -39,5 +39,5 @@ object LTLPerformance:
 
     val initialMarkup = MSet.ofMap(Map((*(TOKEN), 1), (*(R_WAIT), 10), (*(W_WAIT), 3)))
 
-    println("time without cache [ms]: " + timeOf(() => condition eval (pNet.toSystem, initialMarkup) ))
-    println("time with cache [ms]:    " + timeOf(() => condition eval (pNet.toSystemWithCache, initialMarkup) ))
+    println("time without cache [ms]: " + timeOf(() => condition eval (pNet.toSystem, initialMarkup) )) //5.892 ms
+    println("time with cache [ms]:    " + timeOf(() => condition eval (pNet.toSystemWithCache, initialMarkup) )) //279 ms
